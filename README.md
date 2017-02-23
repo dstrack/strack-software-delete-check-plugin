@@ -1,5 +1,6 @@
-# strack-software-delete-check-plugin
-Oracle Apex - Process plugin for checking that a table row is deletable
+README:
+
+Plugin for checking that a table row is deletable.
 
 When you encounter the ORA-02292 error when you attempt to delete a row
 then use this plugin to hide the delete button.
@@ -38,5 +39,5 @@ When the Plug-In is processed, the page item is set to Y when the current row is
 
 The package delete_check_plugin and materialized view MV_DELETE_CHECK have to be installed in the application schema.
 
-To install the plugin navigate to Shared Components / Plug-ins and import the 
-file process_type_plugin_com_strack-software_delete_check.sql 
+To install the plugin navigate to Shared Components / Plug-ins and import the
+file process_type_plugin_com_strack-software_delete_check.sql

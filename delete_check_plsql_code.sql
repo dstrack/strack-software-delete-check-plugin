@@ -27,15 +27,18 @@ Plugin for checking that a table row is deletable.
 	attribute_07 : *Is Deletable Item
 
 */
+-- Grant this role to allow users SELECT privileges on data dictionary views.
+-- GRANT SELECT_CATALOG_ROLE TO HR;
+-- Grant this role to allow users EXECUTE privileges for packages and procedures in the data dictionary.
+-- GRANT EXECUTE_CATALOG_ROLE TO HR;
 
-DROP MATERIALIZED VIEW MV_DELETE_CHECK;
-
-CREATE MATERIALIZED VIEW MV_DELETE_CHECK
-AS
+CREATE OR REPLACE VIEW V_DELETE_CHECK (R_OWNER, R_TABLE_NAME, SUBQUERY)
+ AS
 	SELECT A.R_OWNER1 R_OWNER,
 		A.R_TABLE_NAME1 R_TABLE_NAME,
-		' from ' || DBMS_ASSERT.ENQUOTE_NAME(A.R_OWNER1) || '.' || DBMS_ASSERT.ENQUOTE_NAME(A.R_TABLE_NAME1) || ' A ' || chr(10) || 'WHERE NOT EXISTS '
-		|| LISTAGG(A.SUBQ, chr(10) || '  and not exists ') WITHIN GROUP (ORDER BY A.R_CONSTRAINT_NAME1, A.TABLE_NAME) SUBQ
+		' from ' || case when A.R_OWNER1 != SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') then DBMS_ASSERT.ENQUOTE_NAME(A.R_OWNER1) || '.' end
+		|| DBMS_ASSERT.ENQUOTE_NAME(A.R_TABLE_NAME1) || ' A ' || chr(10) || 'where not exists '
+		|| LISTAGG(A.SUBQUERY, chr(10) || '  and not exists ') WITHIN GROUP (ORDER BY A.R_CONSTRAINT_NAME1, A.TABLE_NAME) SUBQUERY
 	FROM (
 			SELECT
 				CONNECT_BY_ROOT R_CONSTRAINT_NAME R_CONSTRAINT_NAME1,
@@ -45,26 +48,33 @@ AS
 				TABLE_NAME,
 				DELETE_RULE,
 				SYS_CONNECT_BY_PATH(
-					'select 1 from ' || DBMS_ASSERT.ENQUOTE_NAME(A.OWNER) || '.' || DBMS_ASSERT.ENQUOTE_NAME(A.TABLE_NAME) || ' ' || CHR(65+LEVEL)
+					'select 1 from ' || case when A.OWNER != SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') then DBMS_ASSERT.ENQUOTE_NAME(A.OWNER) || '.' end
+					|| DBMS_ASSERT.ENQUOTE_NAME(A.TABLE_NAME) || ' ' || CHR(65+LEVEL)
 					|| ' where ' || REPLACE(REPLACE(JOIN_COND, 'X.', CHR(65+LEVEL-1)||'.'), 'Y.', CHR(65+LEVEL)||'.')
 					|| CASE WHEN CONNECT_BY_ISLEAF = 0 THEN ' and exists ' END,
 					'('
-				) || LPAD(')', LEVEL, ')') SUBQ
+				) || LPAD(')', LEVEL, ')') SUBQUERY
 			FROM (
 				SELECT A.CONSTRAINT_NAME, A.OWNER, A.TABLE_NAME, A.DELETE_RULE,
-					C.CONSTRAINT_NAME R_CONSTRAINT_NAME, C.OWNER R_OWNER, C.TABLE_NAME R_TABLE_NAME,
+					C.CONSTRAINT_NAME R_CONSTRAINT_NAME, C.OWNER R_OWNER, C.TABLE_NAME R_TABLE_NAME, P.PRIVILEGE,
 					LISTAGG('Y.' || DBMS_ASSERT.ENQUOTE_NAME(B.COLUMN_NAME) || ' = ' || 'X.' || DBMS_ASSERT.ENQUOTE_NAME(D.COLUMN_NAME), ' AND ')
 						WITHIN GROUP (ORDER BY B.POSITION) JOIN_COND
 				FROM SYS.ALL_CONSTRAINTS A
 				JOIN SYS.ALL_CONSTRAINTS C ON A.R_CONSTRAINT_NAME = C.CONSTRAINT_NAME AND C.OWNER = A.OWNER
 				JOIN SYS.ALL_CONS_COLUMNS B ON A.CONSTRAINT_NAME = B.CONSTRAINT_NAME AND A.OWNER = B.OWNER
 				JOIN SYS.ALL_CONS_COLUMNS D ON C.CONSTRAINT_NAME = D.CONSTRAINT_NAME AND C.OWNER = D.OWNER AND B.POSITION = D.POSITION
-				WHERE A.CONSTRAINT_TYPE = 'R'
-				AND INSTR(A.OWNER, 'SYS') = 0
+				LEFT OUTER JOIN (
+					SELECT GRANTEE, OWNER, TABLE_NAME, PRIVILEGE
+					FROM USER_TAB_PRIVS
+					WHERE PRIVILEGE = 'SELECT'
+					AND TYPE = 'TABLE'
+				) P ON P.TABLE_NAME = C.TABLE_NAME AND P.OWNER = C.OWNER
+				WHERE SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') IN (P.GRANTEE, C.OWNER)
+				AND A.CONSTRAINT_TYPE = 'R'
 				AND A.STATUS = 'ENABLED'
 				AND C.CONSTRAINT_TYPE IN ('P', 'U')
 				AND C.STATUS = 'ENABLED'
-				GROUP BY A.CONSTRAINT_NAME, A.OWNER, A.TABLE_NAME, A.DELETE_RULE, C.CONSTRAINT_NAME, C.OWNER, C.TABLE_NAME
+				GROUP BY A.CONSTRAINT_NAME, A.OWNER, A.TABLE_NAME, A.DELETE_RULE, C.CONSTRAINT_NAME, C.OWNER, C.TABLE_NAME, P.PRIVILEGE
 			) A
 			WHERE CONNECT_BY_ISLEAF = 1 AND A.DELETE_RULE = 'NO ACTION'
 			CONNECT BY NOCYCLE R_TABLE_NAME = PRIOR TABLE_NAME AND PRIOR DELETE_RULE = 'CASCADE'
@@ -72,34 +82,27 @@ AS
 	GROUP BY A.R_OWNER1, A.R_TABLE_NAME1
 ORDER BY A.R_OWNER1, A.R_TABLE_NAME1;
 
-ALTER  TABLE MV_DELETE_CHECK ADD
- CONSTRAINT MV_DELETE_CHECK_UK UNIQUE (R_OWNER, R_TABLE_NAME) USING INDEX;
-
-
--- SELECT * FROM MV_DELETE_CHECK WHERE R_TABLE_NAME = 'EMPLOYEES' AND R_OWNER = 'HR';
+CREATE TABLE PLUGIN_DELETE_CHECKS (
+	R_OWNER			VARCHAR2(128 BYTE) DEFAULT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'),
+	R_TABLE_NAME	VARCHAR2(128 BYTE),
+	SUBQUERY		VARCHAR2(4000 BYTE),
+	CONSTRAINT PLUGIN_DELETE_CHECKS_UK PRIMARY KEY (R_OWNER, R_TABLE_NAME) USING INDEX
+);
 
 CREATE OR REPLACE PACKAGE delete_check_plugin
 AUTHID CURRENT_USER
 IS
 	TYPE cur_type IS REF CURSOR;
 
-	PROCEDURE Refresh_Mv_Delete_Check;
-
-	PROCEDURE Refresh_Mv_Delete_Check_Job (
-		p_Next_Date DATE DEFAULT SYSDATE,
-		p_Hours INTEGER DEFAULT 1,
-		p_Active INTEGER DEFAULT 1
-	);
-
-	FUNCTION Row_Is_Deletable(
-		p_Owner IN VARCHAR2 DEFAULT USER,
+	FUNCTION Row_Is_Deletable (
+		p_Owner IN VARCHAR2 DEFAULT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'),
 		p_Table_Name IN VARCHAR2,
 		p_PKCol_Name IN VARCHAR2,
 		p_PKCol_Value IN VARCHAR2,
 		p_PKCol_Name2 IN VARCHAR2 DEFAULT NULL,
 		p_PKCol_Value2 IN VARCHAR2 DEFAULT NULL
 	)
-	RETURN NUMBER;
+	RETURN NUMBER;	-- 0 = not deletable, 1 = deletable
 
 	FUNCTION Process_Row_Is_Deletable (
 		p_process in apex_plugin.t_process,
@@ -107,51 +110,75 @@ IS
 	RETURN apex_plugin.t_process_exec_result;
 END delete_check_plugin;
 /
-show errors
 
 CREATE OR REPLACE PACKAGE BODY delete_check_plugin
 IS
-	PROCEDURE Refresh_Mv_Delete_Check
-	IS
-	BEGIN -- run DBMS_MVIEW.REFRESH with invoker rights
-		EXECUTE IMMEDIATE 'SET ROLE ALL';
-		DBMS_MVIEW.REFRESH('MV_DELETE_CHECK');
-	END;
-
-	PROCEDURE Refresh_Mv_Delete_Check_Job (
-		p_Next_Date DATE DEFAULT SYSDATE,
-		p_Hours INTEGER DEFAULT 1,
-		p_Active INTEGER DEFAULT 1
+	FUNCTION Row_Is_Deletable (
+		p_Owner IN VARCHAR2 DEFAULT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'),
+		p_Table_Name IN VARCHAR2,
+		p_PKCol_Name IN VARCHAR2,
+		p_PKCol_Value IN VARCHAR2,
+		p_PKCol_Name2 IN VARCHAR2 DEFAULT NULL,
+		p_PKCol_Value2 IN VARCHAR2 DEFAULT NULL,
+		p_Subquery	IN OUT VARCHAR2,
+		p_Message	IN OUT VARCHAR2
 	)
+	RETURN NUMBER
 	IS
-		v_jobno    NUMBER;
-		v_what VARCHAR2(200) := 'delete_check_plugin.Refresh_Mv_Delete_Check;';
+		TYPE cur_type IS REF CURSOR;
+		subq_cur    cur_type;
+		cnt_cur     cur_type;
+		v_Result NUMBER := 1;
 	BEGIN
-		begin
-			SELECT JOB
-			INTO v_jobno
-			FROM USER_JOBS
-			WHERE WHAT = v_what;
-
-			DBMS_JOB.REMOVE(v_JOBNO);
-		exception
-		  when NO_DATA_FOUND then
-			v_jobno := NULL;
-		end;
-		if p_Active <> 0 then
-			DBMS_JOB.SUBMIT(
-				job 		=> v_jobno,
-				what 		=> v_what,
-				next_date 	=> p_Next_Date,
-				interval 	=> 'SYSDATE + INTERVAL ' || DBMS_ASSERT.ENQUOTE_LITERAL(p_Hours) || ' HOUR'
-			);
-			COMMIT;
-			DBMS_OUTPUT.PUT_LINE('Job No ' || v_jobno || ' has been created');
+		if p_PKCol_Value IS NULL then
+			-- when primary key value is null the row is not deletable
+			return 0;
 		end if;
-	END;
+		-- load query for drill down to dependent child rows with a foreign key to the main table primary key.
+		OPEN subq_cur FOR
+			SELECT SUBQUERY
+			FROM PLUGIN_DELETE_CHECKS
+			WHERE R_OWNER = UPPER(p_Owner)
+			AND R_TABLE_NAME = p_Table_Name;
+		FETCH subq_cur INTO p_Subquery;
+		if subq_cur%FOUND then
+			-- when a child query was found, execute it with the given parameters.
+			if P_PKCol_Name2 IS NOT NULL then
+				p_Subquery := 'SELECT 1 ' || p_Subquery || chr(10) || '  AND ' || p_PKCol_Name || ' = :a AND ' || p_PKCol_Name2 || ' = :b ';
+				if apex_application.g_debug then
+					apex_debug.info('Executing child query:');
+					apex_debug.info(p_Subquery || ' -- using %s, %s', p_PKCol_Value, p_PKCol_Value2);
+				end if;
+				-- DBMS_OUTPUT.PUT_LINE(p_Subquery || ' using ' || p_PKCol_Value || ', ' || p_PKCol_Value2);
+				OPEN cnt_cur FOR p_Subquery USING p_PKCol_Value, p_PKCol_Value2;
+			else
+				p_Subquery := 'SELECT 1 ' || p_Subquery || chr(10) || '  AND ' || p_PKCol_Name || ' = :a ';
+				if apex_application.g_debug then
+					apex_debug.info('executing child query:');
+					apex_debug.info(p_Subquery || ' -- using %s', p_PKCol_Value);
+				end if;
+				-- DBMS_OUTPUT.PUT_LINE(p_Subquery || ' using ' || p_PKCol_Value);
+				OPEN cnt_cur FOR p_Subquery USING p_PKCol_Value;
+			end if;
+			FETCH cnt_cur INTO v_Result;
+			-- when the execution of the child query delivered a row, then the test passed and the row is deletable.
+			if cnt_cur%NOTFOUND then
+				p_Message := 'A dependent child row was found, row is not deletable.';
+				v_Result := 0;
+			else
+				p_Message := 'No dependent child row was found, row is deletable.';
+			end if;
+			CLOSE cnt_cur;
+		else
+			p_Message := 'No child query was found, row is deletable.';
+		end if;
+		CLOSE subq_cur;
 
-	FUNCTION Row_Is_Deletable(
-		p_Owner IN VARCHAR2 DEFAULT USER,
+		RETURN v_Result;
+	END Row_Is_Deletable;
+
+	FUNCTION Row_Is_Deletable (
+		p_Owner IN VARCHAR2 DEFAULT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'),
 		p_Table_Name IN VARCHAR2,
 		p_PKCol_Name IN VARCHAR2,
 		p_PKCol_Value IN VARCHAR2,
@@ -160,64 +187,20 @@ IS
 	)
 	RETURN NUMBER
 	IS
-		TYPE cur_type IS REF CURSOR;
-		subq_cur    cur_type;
-		cnt_cur     cur_type;
-		v_Result NUMBER := 1;
-		v_Subquery VARCHAR2(32767);
+		v_Result 				NUMBER;
+		v_Message 				VARCHAR2(500);
+		v_Subquery 				PLUGIN_DELETE_CHECKS.SUBQUERY%TYPE;
 	BEGIN
-		if p_PKCol_Value IS NULL then
-			-- when primary key value is null the row is not deletable
-			return 0;
-		end if;
-		-- load query for drill down to dependent child rows with a foreign key to the main table primary key.
-		OPEN subq_cur FOR
-			SELECT SUBQ
-			FROM MV_DELETE_CHECK
-			WHERE R_OWNER = UPPER(p_Owner)
-			AND R_TABLE_NAME = p_Table_Name;
-		FETCH subq_cur INTO v_Subquery;
-		if subq_cur%FOUND then
-			-- when a child query was found, execute it with the given parameters.
-			if P_PKCol_Name2 IS NOT NULL then
-				v_Subquery := 'SELECT 1 ' || v_Subquery || chr(10) || '  AND ' || p_PKCol_Name || ' = :a AND ' || p_PKCol_Name2 || ' = :b ';
-				if apex_application.g_debug then
-					apex_debug.info('Executing child query:');
-					apex_debug.info(v_Subquery || ' -- using %s, %s', p_PKCol_Value, p_PKCol_Value2);
-				end if;
-				-- DBMS_OUTPUT.PUT_LINE(v_Subquery || ' using ' || p_PKCol_Value || ', ' || p_PKCol_Value2);
-				OPEN cnt_cur FOR v_Subquery USING p_PKCol_Value, p_PKCol_Value2;
-			else
-				v_Subquery := 'SELECT 1 ' || v_Subquery || chr(10) || '  AND ' || p_PKCol_Name || ' = :a ';
-				if apex_application.g_debug then
-					apex_debug.info('executing child query:');
-					apex_debug.info(v_Subquery || ' -- using %s', p_PKCol_Value);
-				end if;
-				-- DBMS_OUTPUT.PUT_LINE(v_Subquery || ' using ' || p_PKCol_Value);
-				OPEN cnt_cur FOR v_Subquery USING p_PKCol_Value;
-			end if;
-			FETCH cnt_cur INTO v_Result;
-			-- when the execution of the child query delivered a row, then the test passed and the row is deletable.
-			if cnt_cur%NOTFOUND then
-				if apex_application.g_debug then
-					apex_debug.info('Dependent child row was found, row is not deletable.');
-				end if;
-				v_Result := 0;
-			else
-				if apex_application.g_debug then
-					apex_debug.info('No dependent child row was found, row is deletable.');
-				end if;
-				v_Result := 1;
-			end if;
-			CLOSE cnt_cur;
-		else
-			-- when not query was found, then the row is deletable.
-			if apex_application.g_debug then
-				apex_debug.info('not child query was found, row is deletable.');
-			end if;
-		end if;
-		CLOSE subq_cur;
-
+		v_Result := delete_check_plugin.Row_Is_Deletable (
+			p_Owner 		=> p_Owner,
+			p_Table_Name	=> p_Table_Name,
+			p_PKCol_Name	=> p_PKCol_Name,
+			p_PKCol_Value	=> p_PKCol_Value,
+			p_PKCol_Name2	=> p_PKCol_Name2,
+			p_PKCol_Value2	=> p_PKCol_Value2,
+			p_Subquery		=> v_Subquery,
+			p_Message		=> v_Message
+		);
 		RETURN v_Result;
 	END Row_Is_Deletable;
 
@@ -238,6 +221,8 @@ IS
 		v_Is_Deletable_Item		VARCHAR2(50);
 		v_Is_Deletable			VARCHAR2(50);
 		v_Result 				NUMBER;
+		v_Message 				VARCHAR2(500);
+		v_Subquery 				PLUGIN_DELETE_CHECKS.SUBQUERY%TYPE;
 	BEGIN
 		if apex_application.g_debug then
 			apex_plugin_util.debug_process (
@@ -271,20 +256,31 @@ IS
 			p_PKCol_Name	=> v_Primary_Key_Column,
 			p_PKCol_Value	=> v_Primary_Key_Value,
 			p_PKCol_Name2	=> v_Secondary_Key_Column,
-			p_PKCol_Value2	=> v_Secondary_Key_Value
+			p_PKCol_Value2	=> v_Secondary_Key_Value,
+			p_Subquery		=> v_Subquery,
+			p_Message		=> v_Message
 		);
 		v_Is_Deletable := case when v_Result = 0 then 'N' else 'Y' end;
+        if apex_application.g_debug then
+            apex_debug.info('Check Query          : %s', v_Subquery);
+            apex_debug.info('Message              : %s', v_Message);
+            apex_debug.info('Is_Deletable         : %s', v_Is_Deletable);
+        end if;
 		apex_util.set_session_state(v_Is_Deletable_Item, v_Is_Deletable);
 		RETURN v_exec_result;
 	END Process_Row_Is_Deletable;
 
 END delete_check_plugin;
 /
-show errors
 
+INSERT INTO PLUGIN_DELETE_CHECKS (R_OWNER, R_TABLE_NAME, SUBQUERY)
+SELECT R_OWNER, R_TABLE_NAME, SUBQUERY FROM V_DELETE_CHECK;
+
+COMMIT;
+
+-- Test:
+-- SELECT * FROM PLUGIN_DELETE_CHECKS WHERE R_TABLE_NAME = 'EMPLOYEES' AND R_OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');
 -- SELECT delete_check_plugin.Row_Is_Deletable(p_Owner=>'SH', p_Table_Name=>'CUSTOMERS', P_PKCol_Name=>'CUST_ID', p_PKCol_Value=>'24540') Row_Is_Deletable FROM DUAL;
 
-begin
-	delete_check_plugin.Refresh_Mv_Delete_Check_Job;
-end;
-/
+-- Populate:
+-- SELECT /*insert*/ R_TABLE_NAME, SUBQUERY FROM PLUGIN_DELETE_CHECKS WHERE R_OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');
