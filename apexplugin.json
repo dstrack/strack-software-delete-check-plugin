@@ -1,0 +1,33 @@
+{
+  "name": "Row Is Deletable Check",
+  "version": "1.0.0",
+  "description": "Process plugin for checking that a table row is deletable",
+  "keywords": ["dml process", "delete button", "data validation"],
+  "homepage": "https://strack-software-development.blogspot.com",
+  "bugs": {
+    "url": "https://github.com/dstrack/strack-software-delete-check-plugin/issues",
+    "email": "strack.software@t-online.de"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Dirk Strack",
+    "email": "strack.software@t-online.de",
+    "url": "https://strack-software-development.blogspot.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dstrack/strack-software-delete-check-plugin.git"
+  },
+  "oracle": {
+    "versions": ["11.2.0.1", "12.1.0.1"],
+    "apex": {
+      "versions": ["4.2.6", "5.0.0"],
+      "plugin": {
+        "internalName": "COM.STRACK-SOFTWARE.DELETE_CHECK",
+        "type": "process",
+        "demo": "https://apex.oracle.com/pls/apex/f?p=28290:1",
+        "previewImage": "https://raw.githubusercontent.com/dstrack/strack-software-delete-check-plugin/master/preview.png"
+      }
+    }
+  }
+}
