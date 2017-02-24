@@ -48,17 +48,17 @@ You can add the file to the installation script of you application.
 
 * You have to load the table PLUGIN_DELETE_CHECKS in an development environment where you can 
 access the system catalog tables, that are used in the view V_DELETE_CHECK:
-
+`
 INSERT INTO PLUGIN_DELETE_CHECKS (R_OWNER, R_TABLE_NAME, SUBQUERY)
 SELECT R_OWNER, R_TABLE_NAME, SUBQUERY FROM V_DELETE_CHECK;
 COMMIT;
-
+`
 * In order to use the plugin in an Workspace where you can not access the system catalog tables,
 add INSERT statements to an install script that is uploaded for your application.
-With Oracle SQL Developer you can then produce the INSERT statements to populate the table PLUGIN_DELETE_CHECKS.
-
-SELECT /*insert*/ R_TABLE_NAME, SUBQUERY FROM PLUGIN_DELETE_CHECKS WHERE R_OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');
-
+With Oracle SQL Developer you can produce the INSERT statements to populate the table PLUGIN_DELETE_CHECKS.
+`
+SELECT /\*insert\*/ R_TABLE_NAME, SUBQUERY FROM PLUGIN_DELETE_CHECKS WHERE R_OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');
+`
 --------
 
 Regards
