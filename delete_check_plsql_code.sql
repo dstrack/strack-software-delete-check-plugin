@@ -145,18 +145,10 @@ IS
 			-- when a child query was found, execute it with the given parameters.
 			if P_PKCol_Name2 IS NOT NULL then
 				p_Subquery := 'SELECT 1 ' || p_Subquery || chr(10) || '  AND ' || p_PKCol_Name || ' = :a AND ' || p_PKCol_Name2 || ' = :b ';
-				if apex_application.g_debug then
-					apex_debug.info('Executing child query:');
-					apex_debug.info(p_Subquery || ' -- using %s, %s', p_PKCol_Value, p_PKCol_Value2);
-				end if;
 				-- DBMS_OUTPUT.PUT_LINE(p_Subquery || ' using ' || p_PKCol_Value || ', ' || p_PKCol_Value2);
 				OPEN cnt_cur FOR p_Subquery USING p_PKCol_Value, p_PKCol_Value2;
 			else
 				p_Subquery := 'SELECT 1 ' || p_Subquery || chr(10) || '  AND ' || p_PKCol_Name || ' = :a ';
-				if apex_application.g_debug then
-					apex_debug.info('executing child query:');
-					apex_debug.info(p_Subquery || ' -- using %s', p_PKCol_Value);
-				end if;
 				-- DBMS_OUTPUT.PUT_LINE(p_Subquery || ' using ' || p_PKCol_Value);
 				OPEN cnt_cur FOR p_Subquery USING p_PKCol_Value;
 			end if;
