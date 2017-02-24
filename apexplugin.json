@@ -1,9 +1,9 @@
 {
   "name": "Row Is Deletable Check",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Process plugin for checking that a table row is deletable",
   "keywords": ["dml process", "delete button", "data validation"],
-  "homepage": "https://strack-software-development.blogspot.com",
+  "homepage": "https://github.com/dstrack/strack-software-delete-check-plugin",
   "bugs": {
     "url": "https://github.com/dstrack/strack-software-delete-check-plugin/issues",
     "email": "strack.software@t-online.de"
