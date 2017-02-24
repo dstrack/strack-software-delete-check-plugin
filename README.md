@@ -59,7 +59,7 @@ With Oracle SQL Developer you can produce the INSERT statements to populate the 
 `
 SELECT /*insert*/ R_TABLE_NAME, SUBQUERY FROM PLUGIN_DELETE_CHECKS WHERE R_OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');
 `
---------
+
 
 Regards
 Dirk Strack
