@@ -57,7 +57,7 @@ COMMIT;
 add INSERT statements to an install script that is uploaded for your application.
 With Oracle SQL Developer you can produce the INSERT statements to populate the table PLUGIN_DELETE_CHECKS.
 `
-SELECT /\*insert\*/ R_TABLE_NAME, SUBQUERY FROM PLUGIN_DELETE_CHECKS WHERE R_OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');
+SELECT /*insert*/ R_TABLE_NAME, SUBQUERY FROM PLUGIN_DELETE_CHECKS WHERE R_OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');
 `
 --------
 
