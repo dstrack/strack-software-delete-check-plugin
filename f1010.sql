@@ -27,7 +27,7 @@ prompt APPLICATION 1010 - Delete Check Plugin Demo
 -- Application Export:
 --   Application:     1010
 --   Name:            Delete Check Plugin Demo
---   Date and Time:   00:03 Friday February 24, 2017
+--   Date and Time:   18:08 Friday February 24, 2017
 --   Exported By:     DIRK
 --   Flashback:       0
 --   Export Type:     Application Export
@@ -37,7 +37,7 @@ prompt APPLICATION 1010 - Delete Check Plugin Demo
 
 -- Application Statistics:
 --   Pages:                      2
---     Items:                   18
+--     Items:                   17
 --     Processes:                6
 --     Regions:                  6
 --     Buttons:                  9
@@ -97,7 +97,7 @@ wwv_flow_api.create_flow(
 ,p_flow_image_prefix => nvl(wwv_flow_application_install.get_image_prefix,'')
 ,p_authentication=>'PLUGIN'
 ,p_authentication_id=>wwv_flow_api.id(29225823068226294)
-,p_application_tab_set=>0
+,p_application_tab_set=>1
 ,p_logo_image=>'TEXT:Delete Check Plugin Demo'
 ,p_public_user=>'APEX_PUBLIC_USER'
 ,p_proxy_server=> nvl(wwv_flow_application_install.get_proxy,'')
@@ -110,7 +110,7 @@ wwv_flow_api.create_flow(
 ,p_rejoin_existing_sessions=>'N'
 ,p_csv_encoding=>'Y'
 ,p_last_updated_by=>'DIRK'
-,p_last_upd_yyyymmddhh24miss=>'20170223233014'
+,p_last_upd_yyyymmddhh24miss=>'20170224175455'
 ,p_file_prefix => nvl(wwv_flow_application_install.get_static_app_file_prefix,'')
 ,p_ui_type_name => null
 );
@@ -9335,7 +9335,7 @@ wwv_flow_api.create_page(
 ,p_cache_timeout_seconds=>21600
 ,p_help_text=>'No help is available for this page.'
 ,p_last_updated_by=>'DIRK'
-,p_last_upd_yyyymmddhh24miss=>'20170223222538'
+,p_last_upd_yyyymmddhh24miss=>'20170224175455'
 );
 wwv_flow_api.create_report_region(
  p_id=>wwv_flow_api.id(29227416954226334)
@@ -9360,9 +9360,10 @@ wwv_flow_api.create_report_region(
 '    A."COMMISSION_PCT",',
 '    M."LAST_NAME" || '', '' || M."FIRST_NAME" as "MANAGER",',
 '    D."DEPARTMENT_NAME" as "DEPARTMENT",',
-'    case when not exists (select 1 from "DEPARTMENTS" B where B."MANAGER_ID" = A."EMPLOYEE_ID")',
-'      and not exists (select 1 from "EMPLOYEES" B where B."MANAGER_ID" = A."EMPLOYEE_ID")',
-'      and not exists (select 1 from "JOB_HISTORY" B where B."EMPLOYEE_ID" = A."EMPLOYEE_ID") ',
+'    case when delete_check_plugin.Row_Is_Deletable(',
+'        p_Table_Name=>''EMPLOYEES'', ',
+'        p_PKCol_Name=>''EMPLOYEE_ID'', ',
+'        p_PKCol_Value=> A."EMPLOYEE_ID") = 1',
 '    then ''YES'' else ''NO'' end IS_DELETABLE',
 'from   "EMPLOYEES" A',
 'left outer join "EMPLOYEES" M on A.MANAGER_ID = M.EMPLOYEE_ID',
@@ -9583,8 +9584,18 @@ wwv_flow_api.create_page_plug(
 ,p_plug_header=>'<pre>'
 ,p_plug_footer=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
 '----------------------------',
-'The column ''Is Deletable'' was build by selecting a subquery from MV_DELETE_CHECK: ',
-'select SUBQUERY from PLUGIN_DELETE_CHECKS where R_OWNER = ''&P1_SCHEMA_NAME.'' and R_TABLE_NAME = ''EMPLOYEES'';',
+'The expression for column ''Is Deletable'' invokes the function delete_check_plugin.Row_Is_Deletable.',
+'',
+'	FUNCTION delete_check_plugin.Row_Is_Deletable (',
+'		p_Owner IN VARCHAR2 DEFAULT SYS_CONTEXT(''USERENV'', ''CURRENT_SCHEMA''),',
+'		p_Table_Name IN VARCHAR2,',
+'		p_PKCol_Name IN VARCHAR2,',
+'		p_PKCol_Value IN VARCHAR2,',
+'		p_PKCol_Name2 IN VARCHAR2 DEFAULT NULL,',
+'		p_PKCol_Value2 IN VARCHAR2 DEFAULT NULL',
+'	)',
+'	RETURN NUMBER;	-- 0 = not deletable, 1 = deletable',
+'',
 ' </pre>'))
 ,p_attribute_01=>'N'
 ,p_attribute_02=>'HTML'
@@ -9698,16 +9709,6 @@ wwv_flow_api.create_page_item(
 ,p_label_alignment=>'RIGHT'
 ,p_field_template=>wwv_flow_api.id(29219976986226241)
 ,p_item_template_options=>'#DEFAULT#'
-);
-wwv_flow_api.create_page_item(
- p_id=>wwv_flow_api.id(29992105171876501)
-,p_name=>'P1_SCHEMA_NAME'
-,p_item_sequence=>40
-,p_item_plug_id=>wwv_flow_api.id(29227416954226334)
-,p_source=>'SYS_CONTEXT(''USERENV'', ''CURRENT_SCHEMA'')'
-,p_source_type=>'FUNCTION'
-,p_display_as=>'NATIVE_HIDDEN'
-,p_attribute_01=>'Y'
 );
 wwv_flow_api.create_page_process(
  p_id=>wwv_flow_api.id(29229083218226342)
