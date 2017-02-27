@@ -27,7 +27,7 @@ prompt APPLICATION 1010 - Delete Check Plugin Demo
 -- Application Export:
 --   Application:     1010
 --   Name:            Delete Check Plugin Demo
---   Date and Time:   18:08 Friday February 24, 2017
+--   Date and Time:   22:35 Sunday February 26, 2017
 --   Exported By:     DIRK
 --   Flashback:       0
 --   Export Type:     Application Export
@@ -97,7 +97,7 @@ wwv_flow_api.create_flow(
 ,p_flow_image_prefix => nvl(wwv_flow_application_install.get_image_prefix,'')
 ,p_authentication=>'PLUGIN'
 ,p_authentication_id=>wwv_flow_api.id(29225823068226294)
-,p_application_tab_set=>1
+,p_application_tab_set=>0
 ,p_logo_image=>'TEXT:Delete Check Plugin Demo'
 ,p_public_user=>'APEX_PUBLIC_USER'
 ,p_proxy_server=> nvl(wwv_flow_application_install.get_proxy,'')
@@ -110,7 +110,7 @@ wwv_flow_api.create_flow(
 ,p_rejoin_existing_sessions=>'N'
 ,p_csv_encoding=>'Y'
 ,p_last_updated_by=>'DIRK'
-,p_last_upd_yyyymmddhh24miss=>'20170224175455'
+,p_last_upd_yyyymmddhh24miss=>'20170226222731'
 ,p_file_prefix => nvl(wwv_flow_application_install.get_static_app_file_prefix,'')
 ,p_ui_type_name => null
 );
@@ -9032,7 +9032,7 @@ wwv_flow_api.create_plugin(
  p_id=>wwv_flow_api.id(29270282102308029)
 ,p_plugin_type=>'PROCESS TYPE'
 ,p_name=>'COM.STRACK-SOFTWARE.DELETE_CHECK'
-,p_display_name=>'Row Is Deletable Check'
+,p_display_name=>'Is Row Deletable Check'
 ,p_supported_ui_types=>'DESKTOP'
 ,p_image_prefix => nvl(wwv_flow_application_install.get_static_plugin_file_prefix('PROCESS TYPE','COM.STRACK-SOFTWARE.DELETE_CHECK'),'')
 ,p_execution_function=>'delete_check_plugin.Process_Row_Is_Deletable'
@@ -9074,7 +9074,11 @@ wwv_flow_api.create_plugin(
 'When the Plug-In is processed, the page item is set to Y when the current row is deletable, otherwise it is set to N.',
 '</p>'))
 ,p_version_identifier=>'1.0'
-,p_plugin_comment=>'The package delete_check_plugin and materialized view MV_DELETE_CHECK have to be installed in the application schema.'
+,p_plugin_comment=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+'The package DELETE_CHECK_PLUGIN, the view V_DELETE_CHECK and the table PLUGIN_DELETE_CHECKS ',
+'have to be installed in the application schema. ',
+'execute the file delete_check_plsql_code.sql to install the required database objects.',
+'You can add the file to the installation script of you application.'))
 ,p_files_version=>2
 );
 wwv_flow_api.create_plugin_attribute(
@@ -9088,7 +9092,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_required=>false
 ,p_is_translatable=>false
 ,p_text_case=>'UPPER'
-,p_help_text=>'Select the table owner (schema) name.'
+,p_help_text=>'Enter the table owner (schema) name.'
 );
 wwv_flow_api.create_plugin_attribute(
  p_id=>wwv_flow_api.id(29290517787356453)
@@ -9100,7 +9104,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_attribute_type=>'TEXT'
 ,p_is_required=>true
 ,p_is_translatable=>false
-,p_help_text=>'Enter the case-sensitive table or view name. You can type in the name or pick from the list.'
+,p_help_text=>'Enter the case-sensitive table name.'
 );
 wwv_flow_api.create_plugin_attribute(
  p_id=>wwv_flow_api.id(29290888862362997)
@@ -9112,7 +9116,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_attribute_type=>'TEXT'
 ,p_is_required=>true
 ,p_is_translatable=>false
-,p_help_text=>'Select the column containing the primary key value. For tables with more than two-part primary keys, select ROWID>/strong>.'
+,p_help_text=>'Enter the column containing the primary key value. For tables with more than two-part primary keys, select <strong>ROWID</strong>.'
 );
 wwv_flow_api.create_plugin_attribute(
  p_id=>wwv_flow_api.id(29310703381487120)
@@ -9136,7 +9140,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_attribute_type=>'TEXT'
 ,p_is_required=>false
 ,p_is_translatable=>false
-,p_help_text=>'Select the column containing the second primary key value. This attribute should only be populated if your primary key is composed of two columns.'
+,p_help_text=>'Enter the column containing the second primary key value. This attribute should only be populated if your primary key is composed of two columns.'
 );
 wwv_flow_api.create_plugin_attribute(
  p_id=>wwv_flow_api.id(29291780646381108)
@@ -9755,7 +9759,7 @@ wwv_flow_api.create_page(
 ,p_cache_mode=>'NOCACHE'
 ,p_help_text=>'No help is available for this page.'
 ,p_last_updated_by=>'DIRK'
-,p_last_upd_yyyymmddhh24miss=>'20170223123302'
+,p_last_upd_yyyymmddhh24miss=>'20170226222731'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(29229816795226377)
@@ -10220,7 +10224,7 @@ wwv_flow_api.create_page_process(
 ,p_process_sequence=>30
 ,p_process_point=>'AFTER_HEADER'
 ,p_process_type=>'PLUGIN_COM.STRACK-SOFTWARE.DELETE_CHECK'
-,p_process_name=>'Row Is Deletable Check '
+,p_process_name=>'Is Row Deletable Check'
 ,p_attribute_02=>'EMPLOYEES'
 ,p_attribute_03=>'EMPLOYEE_ID'
 ,p_attribute_04=>'P2_EMPLOYEE_ID'

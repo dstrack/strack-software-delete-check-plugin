@@ -31,7 +31,7 @@ wwv_flow_api.create_plugin(
  p_id=>wwv_flow_api.id(29270282102308029)
 ,p_plugin_type=>'PROCESS TYPE'
 ,p_name=>'COM.STRACK-SOFTWARE.DELETE_CHECK'
-,p_display_name=>'Row Is Deletable Check'
+,p_display_name=>'Is Row Deletable Check'
 ,p_supported_ui_types=>'DESKTOP'
 ,p_execution_function=>'delete_check_plugin.Process_Row_Is_Deletable'
 ,p_substitute_attributes=>true
@@ -72,7 +72,11 @@ wwv_flow_api.create_plugin(
 'When the Plug-In is processed, the page item is set to Y when the current row is deletable, otherwise it is set to N.',
 '</p>'))
 ,p_version_identifier=>'1.0'
-,p_plugin_comment=>'The package delete_check_plugin and materialized view MV_DELETE_CHECK have to be installed in the application schema.'
+,p_plugin_comment=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+'The package DELETE_CHECK_PLUGIN, the view V_DELETE_CHECK and the table PLUGIN_DELETE_CHECKS ',
+'have to be installed in the application schema. ',
+'execute the file delete_check_plsql_code.sql to install the required database objects.',
+'You can add the file to the installation script of you application.'))
 ,p_files_version=>2
 );
 wwv_flow_api.create_plugin_attribute(
@@ -86,7 +90,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_required=>false
 ,p_is_translatable=>false
 ,p_text_case=>'UPPER'
-,p_help_text=>'Select the table owner (schema) name.'
+,p_help_text=>'Enter the table owner (schema) name.'
 );
 wwv_flow_api.create_plugin_attribute(
  p_id=>wwv_flow_api.id(29290517787356453)
@@ -98,7 +102,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_attribute_type=>'TEXT'
 ,p_is_required=>true
 ,p_is_translatable=>false
-,p_help_text=>'Enter the case-sensitive table or view name. You can type in the name or pick from the list.'
+,p_help_text=>'Enter the case-sensitive table name.'
 );
 wwv_flow_api.create_plugin_attribute(
  p_id=>wwv_flow_api.id(29290888862362997)
@@ -110,7 +114,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_attribute_type=>'TEXT'
 ,p_is_required=>true
 ,p_is_translatable=>false
-,p_help_text=>'Select the column containing the primary key value. For tables with more than two-part primary keys, select ROWID>/strong>.'
+,p_help_text=>'Enter the column containing the primary key value. For tables with more than two-part primary keys, select <strong>ROWID</strong>.'
 );
 wwv_flow_api.create_plugin_attribute(
  p_id=>wwv_flow_api.id(29310703381487120)
@@ -134,7 +138,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_attribute_type=>'TEXT'
 ,p_is_required=>false
 ,p_is_translatable=>false
-,p_help_text=>'Select the column containing the second primary key value. This attribute should only be populated if your primary key is composed of two columns.'
+,p_help_text=>'Enter the column containing the second primary key value. This attribute should only be populated if your primary key is composed of two columns.'
 );
 wwv_flow_api.create_plugin_attribute(
  p_id=>wwv_flow_api.id(29291780646381108)

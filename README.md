@@ -22,8 +22,8 @@ Set 'Expression 2' to Y
 
 Next create a new page process.
 Set 'Process Type' to  'Plug-ins'.
-Set 'Select Plug-in' to 'Row Is Deletable Check'.
-Set 'Name' to 'Row Is Deletable Check'.
+Set 'Select Plug-in' to 'Is Row Deletable Check'.
+Set 'Name' to 'Is Row Deletable Check'.
 Set 'Sequence' to 30 for example - after the 'Automatic Row Fetch' process.
 Set 'Point' to "On Load - After Header".
 
