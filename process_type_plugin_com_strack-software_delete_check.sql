@@ -16,7 +16,7 @@ wwv_flow_api.import_begin (
 ,p_release=>'5.0.3.00.03'
 ,p_default_workspace_id=>5650392499697142
 ,p_default_application_id=>1010
-,p_default_owner=>'DVLA_GHANA_DEV'
+,p_default_owner=>'STRACK_DEV'
 );
 end;
 /
