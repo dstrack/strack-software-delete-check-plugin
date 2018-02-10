@@ -32,13 +32,96 @@ Plugin for checking that a table row is deletable.
 -- Grant this role to allow users EXECUTE privileges for packages and procedures in the data dictionary.
 -- GRANT EXECUTE_CATALOG_ROLE TO HR;
 
+
+
+create or replace type CLOB_AGG_TYPE
+AUTHID CURRENT_USER
+AS OBJECT
+(
+   total clob,
+
+   static function
+		ODCIAggregateInitialize(sctx IN OUT CLOB_agg_type )
+		return number,
+
+   member function
+		ODCIAggregateIterate(self IN OUT CLOB_agg_type ,
+							 value IN clob )
+		return number,
+
+   member function
+		ODCIAggregateTerminate(self IN CLOB_agg_type,
+							   returnValue OUT  clob,
+							   flags IN number)
+		return number,
+
+   member function
+		ODCIAggregateMerge(self IN OUT CLOB_agg_type,
+						   ctx2 IN CLOB_agg_type)
+		return number
+);
+/
+show errors
+
+
+create or replace type body CLOB_AGG_TYPE
+is
+
+	static function ODCIAggregateInitialize(sctx IN OUT CLOB_agg_type)
+	return number
+	is
+	begin
+	    sctx := CLOB_agg_type( null );
+	    return ODCIConst.Success;
+	end;
+
+	member function ODCIAggregateIterate(self IN OUT CLOB_agg_type,
+	                                     value IN clob )
+	return number
+	is
+	begin
+	    self.total := self.total || ', ' || value;
+	    return ODCIConst.Success;
+	end;
+
+	member function ODCIAggregateTerminate(self IN CLOB_agg_type,
+	                                       returnValue OUT clob,
+	                                       flags IN number)
+	return number
+	is
+	begin
+	    returnValue := ltrim(self.total,', ');
+	    return ODCIConst.Success;
+	end;
+
+	member function ODCIAggregateMerge(self IN OUT CLOB_agg_type,
+	                                   ctx2 IN CLOB_agg_type)
+	return number
+	is
+	begin
+	    self.total := self.total || ctx2.total;
+	    return ODCIConst.Success;
+	end;
+end;
+/
+show errors
+
+CREATE or REPLACE FUNCTION CLOBAGG(input clob )
+RETURN clob
+AUTHID CURRENT_USER
+PARALLEL_ENABLE AGGREGATE USING CLOB_agg_type;
+/
+show errors
+
+
 CREATE OR REPLACE VIEW V_DELETE_CHECK (R_OWNER, R_TABLE_NAME, SUBQUERY)
  AS
 	SELECT R_OWNER1 R_OWNER,
 		R_TABLE_NAME1 R_TABLE_NAME,
 		' from ' || case when R_OWNER1 != CURRENT_SCHEMA then DBMS_ASSERT.ENQUOTE_NAME(R_OWNER1) || '.' end
 		|| DBMS_ASSERT.ENQUOTE_NAME(R_TABLE_NAME1) || ' A ' || chr(10) || 'where not exists'
-		|| LISTAGG(SUBQUERY, chr(10) || '  and not exists') WITHIN GROUP (ORDER BY R_CONSTRAINT_NAME1, TABLE_NAME) SUBQUERY
+		-- || LISTAGG(SUBQUERY, chr(10) || '  and not exists') WITHIN GROUP (ORDER BY R_CONSTRAINT_NAME1, TABLE_NAME) SUBQUERY
+		|| REPLACE(CLOBAGG(SUBQUERY), ', ', chr(10) || '  and not exists')
 	FROM (
 			SELECT
 				CONNECT_BY_ROOT R_CONSTRAINT_NAME R_CONSTRAINT_NAME1,
@@ -101,7 +184,7 @@ ORDER BY A.R_OWNER1, A.R_TABLE_NAME1;
 CREATE TABLE PLUGIN_DELETE_CHECKS (
 	R_OWNER			VARCHAR2(128 BYTE) DEFAULT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'),
 	R_TABLE_NAME	VARCHAR2(128 BYTE),
-	SUBQUERY		VARCHAR2(4000 BYTE),
+	SUBQUERY		CLOB,
 	CONSTRAINT PLUGIN_DELETE_CHECKS_UK PRIMARY KEY (R_OWNER, R_TABLE_NAME) USING INDEX
 );
 
