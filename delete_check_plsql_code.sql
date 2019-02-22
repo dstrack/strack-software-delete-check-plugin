@@ -184,12 +184,25 @@ FROM (
 GROUP BY R_OWNER, R_TABLE_NAME, STAT_INTRO
 ORDER BY R_OWNER, R_TABLE_NAME;
 
-CREATE TABLE PLUGIN_DELETE_CHECKS (
-	R_OWNER			VARCHAR2(128 BYTE) DEFAULT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'),
-	R_TABLE_NAME	VARCHAR2(128 BYTE),
-	SUBQUERY		CLOB,
-	CONSTRAINT PLUGIN_DELETE_CHECKS_UK PRIMARY KEY (R_OWNER, R_TABLE_NAME) USING INDEX
-);
+declare
+	v_Count pls_integer;
+begin
+	SELECT COUNT(*)
+	INTO v_Count
+	FROM USER_TABLES
+	WHERE TABLE_NAME = 'PLUGIN_DELETE_CHECKS';
+	if v_Count = 0 then
+		EXECUTE IMMEDIATE q'[
+			CREATE TABLE PLUGIN_DELETE_CHECKS (
+				R_OWNER			VARCHAR2(128 BYTE) DEFAULT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'),
+				R_TABLE_NAME	VARCHAR2(128 BYTE),
+				SUBQUERY		CLOB,
+				CONSTRAINT PLUGIN_DELETE_CHECKS_UK PRIMARY KEY (R_OWNER, R_TABLE_NAME) USING INDEX
+			)
+		]';
+	end if;
+end;
+/
 
 CREATE OR REPLACE PACKAGE delete_check_plugin
 AUTHID CURRENT_USER
@@ -210,8 +223,11 @@ IS
 		p_process in apex_plugin.t_process,
 		p_plugin  in apex_plugin.t_plugin )
 	RETURN apex_plugin.t_process_exec_result;
+
+	PROCEDURE Refresh_After_DDL;
 END delete_check_plugin;
 /
+show errors
 
 CREATE OR REPLACE PACKAGE BODY delete_check_plugin
 IS
@@ -231,11 +247,18 @@ IS
 		subq_cur    cur_type;
 		cnt_cur     cur_type;
 		v_Result NUMBER := 1;
+		v_Primary_Key_Expr VARCHAR2(128);
 	BEGIN
-		if p_PKCol_Value IS NULL then
+		if p_PKCol_Value IS NULL then 
 			-- when primary key value is null the row is not deletable
 			return 0;
 		end if;
+		v_Primary_Key_Expr := case 
+			when p_PKCol_Name IS NULL or INSTR(p_PKCol_Name, ',') > 0 then 
+				'ROWID' 
+			else 
+				p_PKCol_Name
+		end;
 		-- load query for drill down to dependent child rows with a foreign key to the main table primary key.
 		OPEN subq_cur FOR
 			SELECT SUBQUERY
@@ -250,7 +273,7 @@ IS
 				-- DBMS_OUTPUT.PUT_LINE(p_Subquery || ' using ' || p_PKCol_Value || ', ' || p_PKCol_Value2);
 				OPEN cnt_cur FOR p_Subquery USING p_PKCol_Value, p_PKCol_Value2;
 			else
-				p_Subquery := 'SELECT 1 ' || p_Subquery || chr(10) || '  AND ' || p_PKCol_Name || ' = :a ';
+				p_Subquery := 'SELECT 1 ' || p_Subquery || chr(10) || '  AND ' || v_Primary_Key_Expr || ' = :a ';
 				-- DBMS_OUTPUT.PUT_LINE(p_Subquery || ' using ' || p_PKCol_Value);
 				OPEN cnt_cur FOR p_Subquery USING p_PKCol_Value;
 			end if;
@@ -364,8 +387,33 @@ IS
 		RETURN v_exec_result;
 	END Process_Row_Is_Deletable;
 
+	PROCEDURE Refresh_After_DDL
+	IS
+	BEGIN
+		MERGE INTO PLUGIN_DELETE_CHECKS D
+		USING (SELECT NVL(S.R_OWNER, P.R_OWNER) R_OWNER, 
+					NVL(S.R_TABLE_NAME, P.R_TABLE_NAME) R_TABLE_NAME, 
+					S.SUBQUERY,
+					case when S.R_TABLE_NAME IS NULL then 'D' else 'U' end OPERATION
+			FROM V_DELETE_CHECK S
+			FULL OUTER JOIN PLUGIN_DELETE_CHECKS P ON P.R_TABLE_NAME = S.R_TABLE_NAME AND P.R_OWNER = S.R_OWNER
+		) S
+		ON (D.R_TABLE_NAME = S.R_TABLE_NAME AND D.R_OWNER = S.R_OWNER)
+		WHEN MATCHED THEN
+			UPDATE SET D.SUBQUERY = S.SUBQUERY WHERE S.OPERATION = 'U' 
+			DELETE WHERE S.OPERATION = 'D' 
+		WHEN NOT MATCHED THEN
+			INSERT (D.R_OWNER, D.R_TABLE_NAME, D.SUBQUERY)
+			VALUES (S.R_OWNER, S.R_TABLE_NAME, S.SUBQUERY)
+		;
+		COMMIT;
+	END Refresh_After_DDL;
+
 END delete_check_plugin;
 /
+show errors
+
+TRUNCATE TABLE PLUGIN_DELETE_CHECKS;
 
 INSERT INTO PLUGIN_DELETE_CHECKS (R_OWNER, R_TABLE_NAME, SUBQUERY)
 SELECT R_OWNER, R_TABLE_NAME, SUBQUERY FROM V_DELETE_CHECK;
