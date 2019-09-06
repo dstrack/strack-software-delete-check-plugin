@@ -327,15 +327,15 @@ IS
 	RETURN apex_plugin.t_process_exec_result
 	IS
 		v_exec_result apex_plugin.t_process_exec_result;
-		v_Table_Owner			VARCHAR2(50);
-		v_Table_Name			VARCHAR2(50);
-		v_Primary_Key_Column	VARCHAR2(50);
-		v_Primary_Key_Item		VARCHAR2(50);
-		v_Primary_Key_Value		VARCHAR2(500);
-		v_Secondary_Key_Column	VARCHAR2(50);
-		v_Secondary_Key_Item	VARCHAR2(50);
-		v_Secondary_Key_Value	VARCHAR2(500);
-		v_Is_Deletable_Item		VARCHAR2(50);
+		v_Table_Owner			VARCHAR2(32767);
+		v_Table_Name			VARCHAR2(32767);
+		v_Primary_Key_Column	VARCHAR2(32767);
+		v_Primary_Key_Item		VARCHAR2(32767);
+		v_Primary_Key_Value		VARCHAR2(32767);
+		v_Secondary_Key_Column	VARCHAR2(32767);
+		v_Secondary_Key_Item	VARCHAR2(32767);
+		v_Secondary_Key_Value	VARCHAR2(32767);
+		v_Is_Deletable_Item		VARCHAR2(32767);
 		v_Is_Deletable			VARCHAR2(50);
 		v_Result 				NUMBER;
 		v_Message 				VARCHAR2(500);
