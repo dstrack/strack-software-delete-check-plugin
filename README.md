@@ -1,4 +1,4 @@
-README:
+#README:
 
 Oracle Apex Plug-in for checking that a table row is deletable.
 
@@ -36,24 +36,24 @@ You can type in the name or pick from the list of available items. (for example:
 When the Plug-In is processed, the page item is set to Y when the current row is deletable, otherwise it is set to N.
 
 --------
-Installation:
+##Installation:
 
-* To install the apex plugin navigate to Shared Components / Plug-ins and import the file 
+- To install the apex plugin navigate to Shared Components / Plug-ins and import the file 
 process_type_plugin_com_strack-software_delete_check.sql
 
-* The package DELETE_CHECK_PLUGIN, the view V_DELETE_CHECK and the table PLUGIN_DELETE_CHECKS 
+- The package DELETE_CHECK_PLUGIN, the view V_DELETE_CHECK and the table PLUGIN_DELETE_CHECKS 
 have to be installed in the application schema. 
 execute the file delete_check_plsql_code.sql to install the required database objects.
 You can add the file to the installation script of you application.
 
-* You have to load the table PLUGIN_DELETE_CHECKS in an development environment where you can 
+- You have to load the table PLUGIN_DELETE_CHECKS in an development environment where you can 
 access the system catalog tables, that are used in the view V_DELETE_CHECK:
 `
 INSERT INTO PLUGIN_DELETE_CHECKS (R_OWNER, R_TABLE_NAME, SUBQUERY)
 SELECT R_OWNER, R_TABLE_NAME, SUBQUERY FROM V_DELETE_CHECK;
 COMMIT;
 `
-* In order to use the plugin in an Workspace where you can not access the system catalog tables,
+- In order to use the plugin in an Workspace where you can not access the system catalog tables,
 add INSERT statements to an install script that is uploaded for your application.
 With Oracle SQL Developer you can produce the INSERT statements to populate the table PLUGIN_DELETE_CHECKS.
 `
