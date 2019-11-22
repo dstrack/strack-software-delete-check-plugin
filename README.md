@@ -2,7 +2,7 @@
 
 Oracle Apex Plug-in for checking that a table row is deletable.
 
-When you encounter the ORA-02292 error when you attempt to delete a row
+When you encounter the ORA-02292 error when you attempt to delete a row,
 then use this plugin to hide the delete button.
 
 In case you have created a page of type 'DML Form' with a 'Delete' Button, then this button is shown for each existing row.
@@ -10,7 +10,7 @@ When the application user tries to delete a row that is referenced directly or i
 by a foreign key with a delete_rule of 'NO ACTION',
 then the system will return an "ORA-02292: integrity constraint <constraint name> violated - child record found" error message.
 
-Now you can use this plugin to hide the delete button when a table row can not be deleted.
+Now you can use this plugin to hide the delete button, when a table row can not be deleted.
 
 You have to create a hidden Page Item PXX_IS_DELETABLE.
 The PXX_IS_DELETABLE has to be selected in the 'Is Deletable Item' attribute of the plugin.
