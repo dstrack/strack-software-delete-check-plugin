@@ -1,4 +1,4 @@
-#README:
+# README:
 
 Oracle Apex Plug-in for checking that a table row is deletable.
 
@@ -36,7 +36,7 @@ You can type in the name or pick from the list of available items. (for example:
 When the Plug-In is processed, the page item is set to Y when the current row is deletable, otherwise it is set to N.
 
 --------
-##Installation:
+## Installation:
 
 - To install the apex plugin navigate to Shared Components / Plug-ins and import the file 
 process_type_plugin_com_strack-software_delete_check.sql
