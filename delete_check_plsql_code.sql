@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Dirk Strack
+Copyright 2017-2019 Dirk Strack
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -413,15 +413,12 @@ END delete_check_plugin;
 /
 show errors
 
-TRUNCATE TABLE PLUGIN_DELETE_CHECKS;
-
-INSERT INTO PLUGIN_DELETE_CHECKS (R_OWNER, R_TABLE_NAME, SUBQUERY)
-SELECT R_OWNER, R_TABLE_NAME, SUBQUERY FROM V_DELETE_CHECK;
-
-COMMIT;
+begin
+	delete_check_plugin.Refresh_After_DDL;
+end;
+/
 
 -- Test:
--- SELECT * FROM PLUGIN_DELETE_CHECKS WHERE R_TABLE_NAME = 'EMPLOYEES' AND R_OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA');
 -- SELECT delete_check_plugin.Row_Is_Deletable(p_Owner=>'SH', p_Table_Name=>'CUSTOMERS', P_PKCol_Name=>'CUST_ID', p_PKCol_Value=>'24540') Row_Is_Deletable FROM DUAL;
 
 -- Populate:

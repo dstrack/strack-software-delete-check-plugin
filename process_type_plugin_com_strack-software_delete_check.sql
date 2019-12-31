@@ -1,3 +1,4 @@
+prompt --application/set_environment
 set define off verify off feedback off
 whenever sqlerror exit sql.sqlcode rollback
 --------------------------------------------------------------------------------
@@ -5,24 +6,19 @@ whenever sqlerror exit sql.sqlcode rollback
 -- ORACLE Application Express (APEX) export file
 --
 -- You should run the script connected to SQL*Plus as the Oracle user
--- APEX_050000 or as the owner (parsing schema) of the application.
+-- APEX_190100 or as the owner (parsing schema) of the application.
 --
 -- NOTE: Calls to apex_application_install override the defaults below.
 --
 --------------------------------------------------------------------------------
 begin
 wwv_flow_api.import_begin (
- p_version_yyyy_mm_dd=>'2013.01.01'
-,p_release=>'5.0.3.00.03'
-,p_default_workspace_id=>5650392499697142
+ p_version_yyyy_mm_dd=>'2019.03.31'
+,p_release=>'19.1.0.00.15'
+,p_default_workspace_id=>1304835857079617
 ,p_default_application_id=>1010
 ,p_default_owner=>'STRACK_DEV'
 );
-end;
-/
-prompt --application/ui_types
-begin
-null;
 end;
 /
 prompt --application/shared_components/plugins/process_type/com_strack_software_delete_check
@@ -33,10 +29,11 @@ wwv_flow_api.create_plugin(
 ,p_name=>'COM.STRACK-SOFTWARE.DELETE_CHECK'
 ,p_display_name=>'Is Row Deletable Check'
 ,p_supported_ui_types=>'DESKTOP'
+,p_api_version=>1
 ,p_execution_function=>'delete_check_plugin.Process_Row_Is_Deletable'
 ,p_substitute_attributes=>true
 ,p_subscribe_plugin_settings=>true
-,p_help_text=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+,p_help_text=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<p>',
 'Plugin for checking that a tables row is deletable.',
 '</p>',
@@ -72,7 +69,7 @@ wwv_flow_api.create_plugin(
 'When the Plug-In is processed, the page item is set to Y when the current row is deletable, otherwise it is set to N.',
 '</p>'))
 ,p_version_identifier=>'1.0'
-,p_plugin_comment=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+,p_plugin_comment=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'The package DELETE_CHECK_PLUGIN, the view V_DELETE_CHECK and the table PLUGIN_DELETE_CHECKS ',
 'have to be installed in the application schema. ',
 'execute the file delete_check_plsql_code.sql to install the required database objects.',
@@ -151,6 +148,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_required=>false
 ,p_is_translatable=>false
 ,p_depending_on_attribute_id=>wwv_flow_api.id(29291469151371826)
+,p_depending_on_has_to_exist=>true
 ,p_depending_on_condition_type=>'NOT_NULL'
 ,p_help_text=>'Enter the page or application item that holds the second primary key column value. You can type in the name or pick from the list.'
 );
@@ -164,7 +162,7 @@ wwv_flow_api.create_plugin_attribute(
 ,p_attribute_type=>'PAGE ITEM'
 ,p_is_required=>true
 ,p_is_translatable=>false
-,p_help_text=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+,p_help_text=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'Enter the page or application item to hold the is-deletable value. You can type in the name or pick from the list.',
 '',
 'If your current row is deletable this item will be set to ''Y'' and otherwise set to ''N''.'))
