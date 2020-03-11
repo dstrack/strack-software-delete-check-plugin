@@ -415,6 +415,13 @@ show errors
 
 begin
 	delete_check_plugin.Refresh_After_DDL;
+exception
+  when OTHERS then
+	if SQLCODE = -40 then -- ORA-00040: active time limit exceeded - call aborted
+        	DBMS_OUTPUT.PUT_LINE('-- Warning -- SQL Error :' || SQLCODE || ' ' || SQLERRM);
+	else
+		RAISE;
+	end if;
 end;
 /
 
