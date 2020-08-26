@@ -15,7 +15,7 @@ begin
 wwv_flow_api.import_begin (
  p_version_yyyy_mm_dd=>'2019.03.31'
 ,p_release=>'19.1.0.00.15'
-,p_default_workspace_id=>1304835857079617
+,p_default_workspace_id=>1293931922049787
 ,p_default_application_id=>1010
 ,p_default_owner=>'STRACK_DEV'
 );
@@ -27,7 +27,7 @@ prompt APPLICATION 1010 - Delete Check Plugin Demo
 -- Application Export:
 --   Application:     1010
 --   Name:            Delete Check Plugin Demo
---   Date and Time:   01:16 Tuesday December 31, 2019
+--   Date and Time:   22:51 Thursday August 20, 2020
 --   Exported By:     DIRK
 --   Flashback:       0
 --   Export Type:     Application Export
@@ -108,7 +108,7 @@ wwv_flow_api.create_flow(
 ,p_rejoin_existing_sessions=>'N'
 ,p_csv_encoding=>'Y'
 ,p_last_updated_by=>'DIRK'
-,p_last_upd_yyyymmddhh24miss=>'20191230023439'
+,p_last_upd_yyyymmddhh24miss=>'20200820224847'
 ,p_file_prefix => nvl(wwv_flow_application_install.get_static_app_file_prefix,'')
 ,p_ui_type_name => null
 );
@@ -9332,7 +9332,8 @@ wwv_flow_api.create_plugin(
 'You can type in the name or pick from the list of available items. (for example: P2_IS_DELETABLE)',
 'When the Plug-In is processed, the page item is set to Y when the current row is deletable, otherwise it is set to N.',
 '</p>'))
-,p_version_identifier=>'1.0'
+,p_version_identifier=>'1.0.6'
+,p_about_url=>'https://github.com/dstrack/strack-software-delete-check-plugin.git'
 ,p_plugin_comment=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'The package DELETE_CHECK_PLUGIN, the view V_DELETE_CHECK and the table PLUGIN_DELETE_CHECKS ',
 'have to be installed in the application schema. ',
