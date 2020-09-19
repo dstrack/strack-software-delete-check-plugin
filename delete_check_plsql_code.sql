@@ -411,17 +411,16 @@ IS
 
 END delete_check_plugin;
 /
-show errors
 
+declare 
+	time_limit_exceeded EXCEPTION; -- declare exception
+	PRAGMA EXCEPTION_INIT (time_limit_exceeded, -40); -- active time limit exceeded 
+	v_use_job CONSTANT boolean := FALSE;
 begin
 	delete_check_plugin.Refresh_After_DDL;
 exception
-  when OTHERS then
-	if SQLCODE = -40 then -- ORA-00040: active time limit exceeded - call aborted
-        	DBMS_OUTPUT.PUT_LINE('-- Warning -- SQL Error :' || SQLCODE || ' ' || SQLERRM);
-	else
-		RAISE;
-	end if;
+  when time_limit_exceeded then
+	DBMS_OUTPUT.PUT_LINE('-- Warning -- SQL Error :' || SQLCODE || ' ' || SQLERRM);
 end;
 /
 
