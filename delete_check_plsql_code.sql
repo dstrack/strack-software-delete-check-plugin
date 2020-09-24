@@ -219,7 +219,7 @@ end;
 CREATE OR REPLACE PACKAGE delete_check_plugin
 AUTHID CURRENT_USER
 IS
-	TYPE cur_type IS REF CURSOR;
+	g_use_job CONSTANT boolean := TRUE;
 
 	FUNCTION Row_Is_Deletable (
 		p_Owner IN VARCHAR2 DEFAULT SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA'),
@@ -237,6 +237,8 @@ IS
 	RETURN apex_plugin.t_process_exec_result;
 
 	PROCEDURE Refresh_After_DDL;
+
+    PROCEDURE Refresh_After_DDL_Job;
 END delete_check_plugin;
 /
 show errors
@@ -255,9 +257,8 @@ IS
 	)
 	RETURN NUMBER
 	IS
-		TYPE cur_type IS REF CURSOR;
-		subq_cur    cur_type;
-		cnt_cur     cur_type;
+		subq_cur    SYS_REFCURSOR;
+		cnt_cur     SYS_REFCURSOR;
 		v_Result NUMBER := 1;
 		v_Primary_Key_Expr VARCHAR2(128);
 	BEGIN
@@ -421,15 +422,34 @@ IS
 		COMMIT;
 	END Refresh_After_DDL;
 
+    PROCEDURE Refresh_After_DDL_Job
+	IS
+	BEGIN
+		dbms_scheduler.create_job(
+			job_name => 'RF_PLUGIN_DELETE_CHECKS',
+			job_type => 'PLSQL_BLOCK',
+			job_action => 'begin delete_check_plugin.Refresh_After_DDL; end;',
+			comments => 'Refresh PLUGIN_DELETE_CHECKS after DDL operation',
+			enabled => true 
+		);
+		COMMIT;
+	END Refresh_After_DDL_Job;
+
 END delete_check_plugin;
 /
 
 declare 
 	time_limit_exceeded EXCEPTION; -- declare exception
 	PRAGMA EXCEPTION_INIT (time_limit_exceeded, -40); -- active time limit exceeded 
-	v_use_job CONSTANT boolean := FALSE;
+	v_count NUMBER;
 begin
-	delete_check_plugin.Refresh_After_DDL;
+	select count(*) into v_count
+	from USER_SYS_PRIVS where PRIVILEGE = 'CREATE JOB';
+	if delete_check_plugin.g_use_job and v_count > 0 then -- launch a background job to speedup the installation.
+		delete_check_plugin.Refresh_After_DDL_Job;
+	else 
+	    delete_check_plugin.Refresh_After_DDL;
+	end if;
 exception
   when time_limit_exceeded then
 	DBMS_OUTPUT.PUT_LINE('-- Warning -- SQL Error :' || SQLCODE || ' ' || SQLERRM);
