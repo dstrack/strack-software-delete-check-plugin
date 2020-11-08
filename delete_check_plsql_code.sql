@@ -439,8 +439,8 @@ END delete_check_plugin;
 /
 
 declare 
-	time_limit_exceeded EXCEPTION; -- declare exception
-	PRAGMA EXCEPTION_INIT (time_limit_exceeded, -40); -- active time limit exceeded 
+	time_limit_exceeded EXCEPTION; 
+	PRAGMA EXCEPTION_INIT (time_limit_exceeded, -40); -- ORA-00040: active time limit exceeded - call aborted
 	v_count NUMBER;
 begin
 	select count(*) into v_count
